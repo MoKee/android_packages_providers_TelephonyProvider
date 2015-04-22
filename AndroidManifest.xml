@@ -78,6 +78,14 @@
                   android:readPermission="android.permission.READ_PHONE_BLACKLIST"
                   android:writePermission="android.permission.CHANGE_PHONE_BLACKLIST" />
 
+        <provider
+            android:name="PhoneLocationProvider"
+            android:authorities="phonelocation"
+            android:exported="true"
+            android:multiprocess="true"
+            android:readPermission="android.permission.READ_PHONE_LOCATION"
+            android:writePermission="android.permission.WRITE_PHONE_LOCATION" />
+
         <provider android:name="HbpcdLookupProvider"
                   android:authorities="hbpcd_lookup"
                   android:exported="true"
