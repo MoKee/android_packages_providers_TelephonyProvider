@@ -110,7 +110,7 @@ public class PhoneLocationProvider extends ContentProvider {
                 qb.appendWhere(PhoneLocation._ID + " = " + uri.getLastPathSegment());
                 break;
             case PL_NUMBER:
-                qb.appendWhere(PhoneLocation.NUMBER + " = " + uri.getLastPathSegment());
+                qb.appendWhere(PhoneLocation.NUMBER + " = \"" + uri.getLastPathSegment() + "\"");
                 break;
             case PL_PHONE_TYPE:
                 qb.appendWhere(PhoneLocation.PHONE_TYPE + " = " + uri.getLastPathSegment());
