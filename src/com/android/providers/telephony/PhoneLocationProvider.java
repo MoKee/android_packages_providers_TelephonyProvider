@@ -24,6 +24,7 @@ import android.content.Context;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.provider.Telephony.PhoneLocation;
@@ -117,6 +118,7 @@ public class PhoneLocationProvider extends ContentProvider {
                 break;
             case PL_LOCATION:
                 qb.appendWhere(PhoneLocation.LOCATION + " = " + uri.getLastPathSegment());
+                break;
             default:
                 Log.e(TAG, "query: invalid request: " + uri);
                 return null;
@@ -127,10 +129,16 @@ public class PhoneLocationProvider extends ContentProvider {
         }
 
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
-        Cursor ret = qb.query(db, projection, selection, selectionArgs, null, null, sortOrder);
+        Cursor ret = null;
+        try {
+            ret = qb.query(db, projection, selection, selectionArgs, null, null, sortOrder);
+        } catch (SQLiteException e) {
+            Log.e(TAG, "returning NULL cursor, query: " + uri, e);
+        }
 
-        ret.setNotificationUri(getContext().getContentResolver(), uri);
-
+        // TODO: Does this need to be a URI for this provider.
+        if (ret != null)
+            ret.setNotificationUri(getContext().getContentResolver(), uri);
         return ret;
     }
 
