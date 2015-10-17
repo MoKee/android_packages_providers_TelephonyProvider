@@ -74,6 +74,7 @@
         <provider android:name="BlacklistProvider"
                   android:authorities="blacklist"
                   android:exported="true"
+                  android:singleUser="true"
                   android:multiprocess="true"
                   android:readPermission="android.permission.READ_PHONE_BLACKLIST"
                   android:writePermission="android.permission.CHANGE_PHONE_BLACKLIST" />
@@ -82,6 +83,7 @@
             android:name="PhoneLocationProvider"
             android:authorities="phonelocation"
             android:exported="true"
+            android:singleUser="true"
             android:multiprocess="true"
             android:readPermission="mokee.permission.READ_PHONE_LOCATION"
             android:writePermission="mokee.permission.WRITE_PHONE_LOCATION" />
