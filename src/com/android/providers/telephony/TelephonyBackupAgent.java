@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009 The Android Open Source Project
  * Copyright (C) 2013 The CyanogenMod Project
+ * Copyright (C) 2015-2016 The MoKee Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +40,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
 import android.provider.Telephony.Blacklist;
+import android.provider.Telephony.PhoneLocation;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -50,33 +52,55 @@ public class TelephonyBackupAgent extends BackupAgentHelper {
     private static final String TAG = "TelephonyBackupAgent";
 
     private static final String KEY_BLACKLIST = "blacklist";
+    private static final String KEY_PHONELOCATION = "phonelocation";
 
     private static final int STATE_BLACKLIST = 0;
-    private static final int STATE_SIZE = 1;
+    private static final int STATE_PHONELOCATION = 1;
+    private static final int STATE_SIZE = 2;
 
     private static final String SEPARATOR = "|";
 
     private static final byte[] EMPTY_DATA = new byte[0];
 
-    private static final int COLUMN_NUMBER = 0;
-    private static final int COLUMN_PHONE_MODE = 1;
-    private static final int COLUMN_MESSAGE_MODE = 2;
+    private static final int COLUMN_BLACKLIST_NUMBER = 0;
+    private static final int COLUMN_BLACKLIST_PHONE_MODE = 1;
+    private static final int COLUMN_BLACKLIST_MESSAGE_MODE = 2;
 
-    private static final String[] PROJECTION = {
+    private static final int COLUMN_PHONELOCATION_NUMBER = 0;
+    private static final int COLUMN_PHONELOCATION_LOCATION = 1;
+    private static final int COLUMN_PHONELOCATION_PHONE_TYPE = 2;
+    private static final int COLUMN_PHONELOCATION_ENGINE_TYPE = 3;
+    private static final int COLUMN_PHONELOCATION_USER_MARK = 4;
+    private static final int COLUMN_PHONELOCATION_UPDATE_TIME = 5;
+
+    private static final String[] BLACKLIST_PROJECTION = {
         Blacklist.NUMBER,
         Blacklist.PHONE_MODE,
         Blacklist.MESSAGE_MODE
+    };
+
+    private static final String[] PHONELOCATION_PROJECTION = {
+        PhoneLocation.NUMBER,
+        PhoneLocation.PHONE_TYPE,
+        PhoneLocation.ENGINE_TYPE,
+        PhoneLocation.LOCATION,
+        PhoneLocation.USER_MARK,
+        PhoneLocation.UPDATE_TIME
     };
 
     @Override
     public void onBackup(ParcelFileDescriptor oldState, BackupDataOutput data,
             ParcelFileDescriptor newState) throws IOException {
         byte[] blacklistData = getBlacklist();
+        byte[] phonelocationData = getPhoneLocation();
         long[] stateChecksums = readOldChecksums(oldState);
 
         stateChecksums[STATE_BLACKLIST] =
                 writeIfChanged(stateChecksums[STATE_BLACKLIST], KEY_BLACKLIST,
                         blacklistData, data);
+        stateChecksums[STATE_PHONELOCATION] =
+                writeIfChanged(stateChecksums[STATE_PHONELOCATION], KEY_PHONELOCATION,
+                        phonelocationData, data);
 
         writeNewChecksums(stateChecksums, newState);
     }
@@ -89,6 +113,8 @@ public class TelephonyBackupAgent extends BackupAgentHelper {
             final int size = data.getDataSize();
             if (KEY_BLACKLIST.equals(key)) {
                 restoreBlacklist(data);
+            } else if (KEY_PHONELOCATION.equals(key)) {
+                restorePhoneLocation(data);
             } else {
                 data.skipEntityData();
             }
@@ -139,7 +165,7 @@ public class TelephonyBackupAgent extends BackupAgentHelper {
     }
 
     private byte[] getBlacklist() {
-        Cursor cursor = getContentResolver().query(Blacklist.CONTENT_URI, PROJECTION,
+        Cursor cursor = getContentResolver().query(Blacklist.CONTENT_URI, BLACKLIST_PROJECTION,
                 null, null, Blacklist.DEFAULT_SORT_ORDER);
         if (cursor == null) {
             return EMPTY_DATA;
@@ -155,9 +181,9 @@ public class TelephonyBackupAgent extends BackupAgentHelper {
         try {
             GZIPOutputStream gzip = new GZIPOutputStream(baos);
             while (!cursor.isAfterLast()) {
-                String number = cursor.getString(COLUMN_NUMBER);
-                int phoneMode = cursor.getInt(COLUMN_PHONE_MODE);
-                int messageMode = cursor.getInt(COLUMN_MESSAGE_MODE);
+                String number = cursor.getString(COLUMN_BLACKLIST_NUMBER);
+                int phoneMode = cursor.getInt(COLUMN_BLACKLIST_PHONE_MODE);
+                int messageMode = cursor.getInt(COLUMN_BLACKLIST_MESSAGE_MODE);
                 // TODO: escape the string
                 String out = number + SEPARATOR + phoneMode + SEPARATOR + messageMode;
                 byte[] line = out.getBytes();
@@ -169,6 +195,48 @@ public class TelephonyBackupAgent extends BackupAgentHelper {
             gzip.finish();
         } catch (IOException ioe) {
             Log.e(TAG, "Couldn't compress the blacklist", ioe);
+            return EMPTY_DATA;
+        } finally {
+            cursor.close();
+        }
+        return baos.toByteArray();
+    }
+
+    private byte[] getPhoneLocation() {
+        Cursor cursor = getContentResolver().query(PhoneLocation.CONTENT_URI, PHONELOCATION_PROJECTION,
+                null, null, PhoneLocation.DEFAULT_SORT_ORDER);
+        if (cursor == null) {
+            return EMPTY_DATA;
+        }
+        if (!cursor.moveToFirst()) {
+            Log.e(TAG, "Couldn't read from the cursor");
+            cursor.close();
+            return EMPTY_DATA;
+        }
+
+        byte[] sizeBytes = new byte[4];
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(cursor.getCount() * 20);
+        try {
+            GZIPOutputStream gzip = new GZIPOutputStream(baos);
+            while (!cursor.isAfterLast()) {
+                String number = cursor.getString(COLUMN_PHONELOCATION_NUMBER);
+                String location = cursor.getString(COLUMN_PHONELOCATION_LOCATION);
+                int phoneType = cursor.getInt(COLUMN_PHONELOCATION_PHONE_TYPE);
+                int engineType = cursor.getInt(COLUMN_PHONELOCATION_ENGINE_TYPE);
+                String userMark = cursor.getString(COLUMN_PHONELOCATION_USER_MARK);
+                long updateTime = cursor.getLong(COLUMN_PHONELOCATION_UPDATE_TIME);
+                // TODO: escape the string
+                String out = number + SEPARATOR + location + SEPARATOR + phoneType +
+                        SEPARATOR + engineType + SEPARATOR + userMark + SEPARATOR + updateTime;
+                byte[] line = out.getBytes();
+                writeInt(sizeBytes, 0, line.length);
+                gzip.write(sizeBytes);
+                gzip.write(line);
+                cursor.moveToNext();
+            }
+            gzip.finish();
+        } catch (IOException ioe) {
+            Log.e(TAG, "Couldn't compress the phonelocation", ioe);
             return EMPTY_DATA;
         } finally {
             cursor.close();
@@ -219,6 +287,66 @@ public class TelephonyBackupAgent extends BackupAgentHelper {
                     cv.put(Blacklist.MESSAGE_MODE, messageMode);
 
                     Uri uri = Blacklist.CONTENT_FILTER_BYNUMBER_URI.buildUpon()
+                            .appendPath(number).build();
+                    getContentResolver().update(uri, cv, null, null);
+                }
+            } catch (NoSuchElementException nsee) {
+                Log.e(TAG, "Token format error\n" + nsee);
+            } catch (NumberFormatException nfe) {
+                Log.e(TAG, "Number format error\n" + nfe);
+            }
+        }
+    }
+
+    private void restorePhoneLocation(BackupDataInput data) {
+        ContentValues cv = new ContentValues(2);
+        byte[] phonelocationCompressed = new byte[data.getDataSize()];
+        byte[] phonelocation = null;
+        try {
+            data.readEntityData(phonelocationCompressed, 0, phonelocationCompressed.length);
+            GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(phonelocationCompressed));
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] tempData = new byte[1024];
+            int got;
+            while ((got = gzip.read(tempData)) > 0) {
+                baos.write(tempData, 0, got);
+            }
+            gzip.close();
+            phonelocation = baos.toByteArray();
+        } catch (IOException ioe) {
+            Log.e(TAG, "Couldn't read and uncompress entity data", ioe);
+            return;
+        }
+
+        int pos = 0;
+        while (pos + 4 < phonelocation.length) {
+            int length = readInt(phonelocation, pos);
+            pos += 4;
+            if (pos + length > phonelocation.length) {
+                Log.e(TAG, "Insufficient data");
+            }
+            String line = new String(phonelocation, pos, length);
+            pos += length;
+            // TODO: unescape the string
+            StringTokenizer st = new StringTokenizer(line, SEPARATOR);
+            try {
+                String number = st.nextToken();
+                String location = st.nextToken();
+                int phoneType = Integer.parseInt(st.nextToken());
+                int engineType = Integer.parseInt(st.nextToken());
+                String userMark = st.nextToken();
+                long updateTime = Long.parseLong(st.nextToken());
+
+                if (!TextUtils.isEmpty(number)) {
+                    cv.clear();
+                    cv.put(PhoneLocation.NUMBER, number);
+                    cv.put(PhoneLocation.LOCATION, location);
+                    cv.put(PhoneLocation.PHONE_TYPE, phoneType);
+                    cv.put(PhoneLocation.ENGINE_TYPE, engineType);
+                    cv.put(PhoneLocation.USER_MARK, userMark);
+                    cv.put(PhoneLocation.UPDATE_TIME, updateTime);
+
+                    Uri uri = PhoneLocation.CONTENT_FILTER_BYNUMBER_URI.buildUpon()
                             .appendPath(number).build();
                     getContentResolver().update(uri, cv, null, null);
                 }
