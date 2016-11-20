@@ -222,11 +222,6 @@ public class PhoneLocationProvider extends ContentProvider {
         return 0;
     }
 
-    private void notifyChange() {
-        notifyChange(null);
-        
-    }
-
     private void notifyChange(Uri changeUri) {
         if (changeUri == null) {
             getContext().getContentResolver().notifyChange(PhoneLocation.CONTENT_URI, null);
