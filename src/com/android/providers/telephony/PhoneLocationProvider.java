@@ -72,7 +72,7 @@ public class PhoneLocationProvider extends ContentProvider {
             // Set up the database schema
             db.execSQL("CREATE TABLE " + LOCATION_TABLE +
                     "(_id INTEGER PRIMARY KEY," +
-                    "number TEXT," +
+                    "number TEXT UNIQUE," +
                     "location TEXT," +
                     "phone_type INTEGER," +
                     "engine_type INTEGER," +
