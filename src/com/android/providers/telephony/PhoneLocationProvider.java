@@ -150,7 +150,7 @@ public class PhoneLocationProvider extends ContentProvider {
         }
 
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
-        long rowID = db.insert(LOCATION_TABLE, null, values);
+        long rowID = db.insertWithOnConflict(LOCATION_TABLE, null, values, SQLiteDatabase.CONFLICT_IGNORE);
         if (rowID <= 0) {
             return null;
         }
