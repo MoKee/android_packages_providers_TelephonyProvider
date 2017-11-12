@@ -38,7 +38,7 @@ public class PhoneLocationProvider extends ContentProvider {
     private static final boolean DEBUG = false;
 
     private static final String DATABASE_NAME = "phonelocation.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     private static final String LOCATION_TABLE = "location";
 
@@ -78,10 +78,14 @@ public class PhoneLocationProvider extends ContentProvider {
                     "engine_type INTEGER," +
                     "user_mark TEXT," +
                     "update_time INTEGER);");
+            db.execSQL("CREATE INDEX `number` ON `" + LOCATION_TABLE + "` (`number`);");
         }
 
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            if (oldVersion == 1) {
+                db.execSQL("CREATE INDEX `number` ON `" + LOCATION_TABLE + "` (`number`);");
+            }
         }
 
     }
