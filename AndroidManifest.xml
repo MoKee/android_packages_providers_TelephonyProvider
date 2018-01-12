@@ -105,6 +105,15 @@
                   android:multiprocess="false"
                   android:writePermission="android.permission.MODIFY_PHONE_STATE" />
 
+        <provider
+                  android:name="PhoneLocationProvider"
+                  android:authorities="phonelocation"
+                  android:exported="true"
+                  android:singleUser="true"
+                  android:multiprocess="true"
+                  android:readPermission="mokee.permission.READ_PHONE_LOCATION"
+                  android:writePermission="mokee.permission.WRITE_PHONE_LOCATION" />
+
         <service
             android:name=".TelephonyBackupAgent$DeferredSmsMmsRestoreService"
             android:exported="false" />
