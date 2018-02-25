@@ -818,9 +818,9 @@ public class TelephonyProvider extends ContentProvider
             }
             // version 19 is latest AOSP version (i.e. Android 8.0).
             // versions 20-23 are unused by AOSP.
-            // version 23 is latest cm-14.1 version
+            // version 23 is latest mkn-mr1 version
             if (oldVersion < (24 << 16 | 6)) {
-                // Upgrade steps from Lineage 14.1 (version 23) are:
+                // Upgrade steps from mkn-mr1 (version 23) are:
                 // 1. Create a temp table- done in createCarriersTable()
                 // 2. copy over APNs from old table to new table - done in copyDataToTmpTable()
                 // 3. Drop the existing table.
